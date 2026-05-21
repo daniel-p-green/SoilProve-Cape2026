@@ -84,6 +84,48 @@ test("business APIs require an authenticated session", async () => {
   assert.equal(ocrBody.error.code, "AUTH_REQUIRED");
 });
 
+test("typed Raimond copilot uses configured OpenRouter model server-side", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousModel = process.env.OPENROUTER_MODEL;
+  process.env.OPENROUTER_API_KEY = ["test", "key"].join("-");
+  process.env.OPENROUTER_MODEL = "openai/gpt-5.5";
+  let openRouterCalls = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    if (url.startsWith(baseUrl)) return originalFetch(input, init);
+    assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
+    const body = JSON.parse(String(init?.body || "{}")) as { model?: string; messages?: Array<{ role: string; content: string }> };
+    assert.equal(body.model, "openai/gpt-5.5");
+    assert.equal(body.messages?.some((message) => message.role === "system" && message.content.includes("Raimond")), true);
+    openRouterCalls += 1;
+    return new Response(
+      JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({ assistant: "Use the reviewed field values before generating an action plan." }) } }]
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
+  try {
+    const result = await postJson<{ choices: Array<{ message: { content: string } }> }>(
+      `${baseUrl}/api/copilot/action`,
+      { question: "What should I do next?" },
+      await login("admin")
+    );
+    const content = JSON.parse(result.choices[0].message.content) as { assistant: string };
+
+    assert.equal(content.assistant.includes("reviewed field values"), true);
+    assert.equal(openRouterCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousKey === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = previousKey;
+    if (previousModel === undefined) delete process.env.OPENROUTER_MODEL;
+    else process.env.OPENROUTER_MODEL = previousModel;
+  }
+});
+
 test("farmer sessions cannot sign prescriptions", async () => {
   const farmerCookie = await login("farmer");
   const bootstrap = await getJson<{ profile: FieldProfile; zones: SoilZone[] }>(`${baseUrl}/api/bootstrap`);

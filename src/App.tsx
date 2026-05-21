@@ -102,6 +102,13 @@ type SampleSoilReport = {
   sourceType: "pdf" | "text";
   note: string;
 };
+type OpenRouterChatCompletion = {
+  choices?: Array<{ message?: { content?: string } }>;
+};
+type RaimondCopilotResponse = {
+  assistant?: unknown;
+  action?: { name?: unknown; args?: unknown };
+};
 
 const oemTargets: Array<{ target: OemTarget; label: string }> = [
   { target: "john_deere", label: "John Deere" },
@@ -1433,8 +1440,69 @@ export function App() {
       selectTab("results");
       return stepAccess.results.locked ? stepAccess.results.reason : "Results opened. Harvest verification and admin audit details are available here when ready.";
     }
+    const pageNumberAnswer = answerPageNumberQuestion(normalized);
+    if (pageNumberAnswer) return pageNumberAnswer;
+    const copilotResponse = await askOpenRouterCopilot(text);
+    if (copilotResponse) return copilotResponse;
     setActiveTab("intake");
     return "Tell me the farm name, field name, acres, state, county, and what the soil report says. I will fill the field data before we generate anything.";
+  }
+
+  function answerPageNumberQuestion(normalized: string) {
+    if (!(normalized.includes("number") || normalized.includes("rate") || normalized.includes("price") || normalized.includes("acre") || normalized.includes("yield") || normalized.includes("saving") || normalized.includes("zone") || normalized.includes("ph") || normalized.includes("organic") || normalized.includes("potassium") || normalized.includes("phosphorus") || normalized.includes("baseline") || normalized.includes("breakeven"))) {
+      return null;
+    }
+    if (normalized.includes("zone") || normalized.includes("ph") || normalized.includes("organic") || normalized.includes("potassium") || normalized.includes("phosphorus")) {
+      return `Current soil zones: ${zones.map((zone) => `${zone.zoneId}: ${formatMaybeNumber(zone.acres)} acres, OM ${formatMaybeNumber(zone.organicMatterPct)}%, pH ${formatMaybeNumber(zone.ph)}, P ${formatMaybeNumber(zone.phosphorusPpm)} ppm, K ${formatMaybeNumber(zone.potassiumPpm)} ppm`).join("; ")}.`;
+    }
+    if (normalized.includes("saving") || normalized.includes("breakeven") || normalized.includes("yield")) {
+      if (!prescription) return `Field yield baseline is ${formatMaybeNumber(profile.threeYearBaselineYield)} bu/ac. Generate a reviewed action plan before quoting modeled savings or breakeven drag.`;
+      return `Modeled savings are $${prescription.savings.dollarsSavedPerAcre.toFixed(2)}/ac, $${prescription.savings.grossFieldSavings.toFixed(2)} across the field, with ${prescription.savings.breakevenYieldDragBuPerAcre.toFixed(2)} bu/ac breakeven yield drag. Baseline yield is ${formatMaybeNumber(profile.threeYearBaselineYield)} bu/ac.`;
+    }
+    if (normalized.includes("rate") || normalized.includes("nitrogen") || normalized.includes("n rate")) {
+      if (prescription) {
+        return `Baseline nitrogen is ${formatMaybeNumber(profile.baselineNitrogenLbsPerAcre)} lb/ac. Draft zone rates: ${prescription.recommendations.map((zone) => `${zone.zoneId} ${zone.nitrogenLbsPerAcre} lb/ac`).join(", ")}.`;
+      }
+      return `Baseline nitrogen is ${formatMaybeNumber(profile.baselineNitrogenLbsPerAcre)} lb/ac. Generate a reviewed action plan to see zone rates.`;
+    }
+    if (normalized.includes("price")) {
+      return `Corn price is $${profile.cornPricePerBushel.toFixed(2)}/bu and nitrogen price is $${profile.nitrogenPricePerLb.toFixed(2)}/lb.`;
+    }
+    if (normalized.includes("acre")) {
+      const zoneAcres = zones.reduce((sum, zone) => sum + zone.acres, 0);
+      return `The field has ${formatMaybeNumber(profile.acres)} acres entered, with ${formatMaybeNumber(zoneAcres)} acres across soil zones.`;
+    }
+    return null;
+  }
+
+  async function askOpenRouterCopilot(question: string) {
+    if (!user) return null;
+    try {
+      const completion = await fetchJson<OpenRouterChatCompletion>("/api/copilot/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          context: {
+            currentStep: tabLabels[activeTab],
+            nextCommand: nextRaimondCommand,
+            fieldDataPresent: hasFieldData(profile, zones),
+            planStatus: prescription?.status ?? "missing"
+          }
+        })
+      });
+      const parsed = parseRaimondCopilotContent(completion.choices?.[0]?.message?.content);
+      if (!parsed || typeof parsed.assistant !== "string" || !parsed.assistant.trim()) return null;
+      const actionName = parsed.action && typeof parsed.action.name === "string" ? parsed.action.name : "";
+      if (!actionName) return parsed.assistant.trim();
+      const actionResult = await onToolAction({
+        name: actionName,
+        args: isPlainRecord(parsed.action?.args) ? parsed.action.args : {}
+      });
+      return `${parsed.assistant.trim()} ${summarizeToolResult(actionResult)}`.trim();
+    } catch {
+      return null;
+    }
   }
 
   return (
@@ -2787,6 +2855,20 @@ function oemStatusHelp(target: OemTarget, state: string) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error.";
+}
+
+function parseRaimondCopilotContent(content: string | undefined): RaimondCopilotResponse | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content) as unknown;
+    return isPlainRecord(parsed) ? (parsed as RaimondCopilotResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
