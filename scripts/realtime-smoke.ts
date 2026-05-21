@@ -19,6 +19,7 @@ const actionPlan = [
   "load_sample_field",
   "import_sample_soil_report",
   "update_field_profile",
+  "edit_field_value",
   "confirm_intake_review",
   "generate_prescription",
   "sign_prescription",
@@ -110,6 +111,7 @@ export async function runRaimondToolSmoke(): Promise<RaimondSmokeResult> {
     actions.push(await runToolAction(baseUrl, state, "load_sample_field", { fieldId: "keller_polk_county_ridge_92" }));
     actions.push(await runToolAction(baseUrl, state, "import_sample_soil_report", { reportId: "keller-polk" }));
     actions.push(await runToolAction(baseUrl, state, "update_field_profile", { nitrogenPricePerLb: 0.72, farmName: "Keller Creek", fieldName: "Ridge 92" }));
+    actions.push(await runToolAction(baseUrl, state, "edit_field_value", { field: "nitrogenPricePerLb", value: 0.72 }));
     actions.push(await runToolAction(baseUrl, state, "confirm_intake_review", {}));
     actions.push(await runToolAction(baseUrl, state, "generate_prescription", {}));
     actions.push(await runToolAction(baseUrl, state, "sign_prescription", { note: "Raimond deterministic smoke signoff." }));
@@ -209,6 +211,14 @@ async function runToolAction(baseUrl: string, state: SmokeState, name: ActionNam
     assert.equal(state.profile.nitrogenPricePerLb, 0.72);
     assert.equal(state.profile.fieldName, "Ridge 92");
     return { name, ok: true, detail: "field=Ridge 92; nitrogenPricePerLb=0.72" };
+  }
+
+  if (name === "edit_field_value") {
+    assert.equal(args.field, "nitrogenPricePerLb");
+    assert.equal(args.value, 0.72);
+    state.profile = { ...state.profile, nitrogenPricePerLb: Number(args.value) };
+    assert.equal(state.profile.nitrogenPricePerLb, 0.72);
+    return { name, ok: true, detail: "nitrogenPricePerLb=0.72" };
   }
 
   if (name === "confirm_intake_review") {

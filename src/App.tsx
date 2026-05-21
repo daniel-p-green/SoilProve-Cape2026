@@ -93,6 +93,15 @@ type YieldOutcome = {
   };
   source: "uploaded" | "existing";
 };
+
+export function workflowProgress(stepAccess: Record<Tab, StepAccess>) {
+  const completed = tabOrder.filter((tab) => stepAccess[tab].state === "complete").length;
+  return {
+    completed,
+    total: tabOrder.length,
+    percentComplete: Math.round((completed / tabOrder.length) * 100)
+  };
+}
 type ReviewIssue = { label: string; detail: string };
 type SampleSoilReport = {
   id: string;
@@ -1666,7 +1675,6 @@ export function App() {
 
             <section className="workspace" id="workspace-panel" aria-label={`${tabLabels[activeTab]} workspace`}>
               <div className="workspace-heading">
-                <span>Current step</span>
                 <h1>{tabLabels[activeTab]}</h1>
               </div>
               {activeTab === "intake" ? (
@@ -1748,9 +1756,8 @@ export function App() {
         </div>
         <div className="footer-credit">
           <span>
-            Created May 2026 by Daniel Green
-            {" "}· <a href="https://www.linkedin.com/in/danielpgreen/" target="_blank" rel="noreferrer" aria-label="Daniel Green on LinkedIn">LinkedIn</a>
-            {" "}· <a href="https://github.com/daniel-p-green" target="_blank" rel="noreferrer" aria-label="Daniel Green on GitHub">GitHub</a>
+            Created May 2026 by <a href="https://www.linkedin.com/in/danielpgreen/" target="_blank" rel="noreferrer" aria-label="Daniel Green on LinkedIn">Daniel Green</a>
+            {" "}(<a href="https://github.com/daniel-p-green" target="_blank" rel="noreferrer" aria-label="Daniel Green on GitHub">@daniel-p-green</a>)
           </span>
         </div>
       </footer>
@@ -2088,7 +2095,7 @@ function RaimondPanel(props: {
         </>
       ) : null}
 
-      {props.suggestions.length > 0 ? (
+      {props.debugMode && props.suggestions.length > 0 ? (
         <div className="rail-examples">
           <div className="rail-suggestions" aria-label="Suggested commands">
             {props.suggestions.slice(0, 4).map((item) => (
@@ -2177,8 +2184,7 @@ function Onboarding(props: {
 }
 
 function WorkflowStepper(props: { activeTab: Tab; stepAccess: Record<Tab, StepAccess>; selectTab: (tab: Tab) => void; runFullDemoSetup: () => Promise<void>; debugMode: boolean }) {
-  const completed = tabOrder.filter((tab) => props.stepAccess[tab].state === "complete").length;
-  const percentComplete = Math.round((completed / tabOrder.length) * 100);
+  const { completed, total, percentComplete } = workflowProgress(props.stepAccess);
   const helpCopy: Record<Tab, string> = {
     intake: "Import or review soil report values.",
     plan: "Generate reviewable rates, economics, and rationale.",
@@ -2190,8 +2196,8 @@ function WorkflowStepper(props: { activeTab: Tab; stepAccess: Record<Tab, StepAc
   return (
     <section className="workflow-stepper" aria-label="Soil report second opinion workflow">
       <div className="process-title">
-        <strong><Tractor size={15} /> Soil report workflow: Soil report second opinion</strong>
-        <span>{completed} of {tabOrder.length} ready</span>
+        <strong><Tractor size={15} /> Soil report workflow</strong>
+        <span>{completed} of {total} complete</span>
       </div>
       <div className="process-meter" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentComplete} aria-label="Soil report process completion">
         <span style={{ width: `${percentComplete}%` }}></span>

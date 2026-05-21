@@ -11,6 +11,7 @@ export function evaluateSecurityAbuse() {
     .split("\n")
     .map((file) => file.trim())
     .filter(Boolean)
+    .filter((file) => fs.existsSync(file))
     .filter((file) => !ignoredExtensions.has(file.slice(file.lastIndexOf(".")).toLowerCase()));
 
   const secretHits = trackedFiles.flatMap((file) => {

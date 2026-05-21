@@ -34,6 +34,7 @@ test("Realtime smoke exercises hands-free Raimond tool actions with safe fallbac
         "load_sample_field",
         "import_sample_soil_report",
         "update_field_profile",
+        "edit_field_value",
         "confirm_intake_review",
         "generate_prescription",
         "sign_prescription",
@@ -45,7 +46,7 @@ test("Realtime smoke exercises hands-free Raimond tool actions with safe fallbac
         "reset_demo_flow"
       ]
     );
-    assert.equal(result.guardrails.actionCount, 16);
+    assert.equal(result.guardrails.actionCount, 17);
     assert.equal(result.guardrails.liveOemCallsBlocked, 0);
     assert.equal(result.fallback.noKeyCode, "OPENAI_NOT_CONFIGURED");
     assert.match(result.fallback.microphoneDenied, /Microphone permission was denied/);
