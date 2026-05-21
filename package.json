@@ -1,0 +1,52 @@
+{
+  "name": "soilprove-v2",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:server\"",
+    "dev:web": "vite --host 127.0.0.1",
+    "dev:server": "tsx watch server/index.ts",
+    "codex:server": "node scripts/start-codex-app-server.mjs",
+    "admin": "tsx scripts/admin.ts",
+    "build": "tsc --noEmit && vite build",
+    "preview": "npm run build && tsx server/index.ts",
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\"",
+    "smoke:realtime": "tsx scripts/realtime-smoke.ts",
+    "evals": "tsx evals/run.ts && tsx evals/docsRun.ts && tsx evals/packetCompleteness.ts && tsx evals/oemAppendix.ts && tsx evals/securityAbuse.ts && tsx evals/productionHardening.ts && tsx evals/walkability.ts",
+    "evals:scoped": "tsx evals/run.ts",
+    "evals:docs": "tsx evals/docsRun.ts --strict",
+    "evals:packet": "tsx evals/packetCompleteness.ts",
+    "evals:oem": "tsx evals/oemAppendix.ts",
+    "evals:security": "tsx evals/securityAbuse.ts",
+    "evals:prod-hardening": "tsx evals/productionHardening.ts",
+    "evals:walkability": "tsx evals/walkability.ts",
+    "evals:all": "npm run evals:scoped && npm run evals:docs && npm run evals:packet && npm run evals:oem && npm run evals:security && npm run evals:prod-hardening && npm run evals:walkability",
+    "evals:live": "SOILPROVE_LIVE_LLM_JUDGE=1 tsx evals/run.ts",
+    "db:backup": "tsx scripts/db-backup.ts backup",
+    "db:restore": "tsx scripts/db-backup.ts restore",
+    "ci:prod-check": "NODE_ENV=production tsx scripts/prod-check.ts",
+    "ci": "npm test && npm run evals && npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "lucide-react": "^0.556.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4",
+    "ws": "^8.20.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1"
+  }
+}

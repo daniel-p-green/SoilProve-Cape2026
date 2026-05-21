@@ -1,0 +1,52 @@
+version: 1
+
+goal:
+  title: "SoilProve Pre-Design Walkability"
+  slug: "soilprove-walkability"
+  status: complete
+  created: "2026-05-20"
+  completed: "2026-05-20"
+  outcome: "Technical proof surfaces are walkable before visual design polish; 7 completed tasks make the implementation visible in-app."
+
+rules:
+  preserve_user_work: true
+  red_green_tdd_required: true
+  keep_product_language_conservative: true
+  manual_live_voice_walkthrough_owned_by_user: true
+
+tasks:
+  - id: W001
+    status: completed
+    objective: "Add guided demo checklist."
+    target: "8 visible steps with complete/pending status."
+    receipt: "Demo path rail shows login, import/review soil, plan, sign, packet, VRT, OEM, and outcome savings."
+  - id: W002
+    status: completed
+    objective: "Expose yield upload and verified savings in UI."
+    target: "Sample CSV, upload action, and result card."
+    receipt: "Dashboard Yield upload panel supports sample CSV, upload, and Verified savings result."
+  - id: W003
+    status: completed
+    objective: "Add Realtime readiness panel."
+    target: "Model, voice, API status, mic permission, connection state, and last tool action."
+    receipt: "Dashboard Realtime readiness panel shows gpt-realtime-2, cedar, API, mic, connection, and last tool action."
+  - id: W004
+    status: completed
+    objective: "Make OCR review explicit."
+    target: "Review-required state plus lab fields visible after import."
+    receipt: "OCR import card shows Review required before use plus county, texture, pH, P, K, and organic matter."
+  - id: W005
+    status: completed
+    objective: "Surface admin audit trail."
+    target: "Latest 8 events visible in dashboard."
+    receipt: "Dashboard Audit trail fetches /api/v1/admin/audit-events and renders latest admin-visible events."
+  - id: W006
+    status: completed
+    objective: "Strengthen OEM status UI."
+    target: "Each brand shows unambiguous state."
+    receipt: "Exports panel shows OEM status cards for John Deere, Case IH/CNH, and AGCO."
+  - id: W007
+    status: completed
+    objective: "Add one-click full demo setup."
+    target: "Admin login, sample field, plan, sign, packet, VRT, John Deere simulation, yield upload."
+    receipt: "Run full demo setup performs admin persona login, seeded field review, plan, signoff, packet, VRT, John Deere simulation, and yield upload."

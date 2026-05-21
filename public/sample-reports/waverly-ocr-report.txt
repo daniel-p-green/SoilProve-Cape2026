@@ -1,0 +1,13 @@
+OCR TEXT FROM SCANNED SOIL REPORT
+Farm: Waverly Ridge
+Farmer: Erin Waverly
+Field: East 64
+County: Callaway
+State: MO
+Acres: 64
+Soil Type: clay loam
+Lab: Prairie Soil Analytics
+Zone ID Acres OM pH P K
+Z1 18 3.6 6.3 31 205
+Z2 22 2.9 6.1 25 190
+Z3 24 5.3 7.4 22 178

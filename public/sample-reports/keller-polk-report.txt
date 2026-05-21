@@ -1,0 +1,17 @@
+SoilProve synthetic intake sample
+Reference style: public agronomic soil report examples with pH, OM, P, and K columns
+Farm: Keller Creek
+Farmer: Jonah Keller
+Field: Ridge 92
+County: Polk
+State: IA
+Field Acres: 92
+Soil Type: clay loam
+Crop: corn
+
+Zone,acres,organic matter %,pH,phosphorus ppm,potassium ppm
+Z1,30,2.6,6.1,30,198
+Z2,32,3.5,6.5,38,220
+Z3,30,1.9,5.5,22,160
+
+Review note: Values are synthetic and formatted to exercise editable intake. Do not treat as a real farm record.

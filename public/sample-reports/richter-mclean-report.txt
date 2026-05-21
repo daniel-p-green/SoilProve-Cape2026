@@ -1,0 +1,17 @@
+SoilProve synthetic intake sample
+Reference style: public Illinois Extension soil-test interpretation fields
+Farm: Richter Prairie
+Farmer: Caleb Richter
+Field: East 76
+County: McLean
+State: IL
+Field Acres: 76
+Soil Type: silty clay loam
+Crop: corn
+
+Zone,acres,organic matter %,pH,phosphorus ppm,potassium ppm
+Z1,24,3.8,6.6,44,242
+Z2,27,4.9,7.0,50,260
+Z3,25,2.6,5.9,28,182
+
+Review note: Values are synthetic and formatted to exercise editable intake. Do not treat as a real farm record.

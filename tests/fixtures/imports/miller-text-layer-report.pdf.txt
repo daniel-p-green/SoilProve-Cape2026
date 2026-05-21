@@ -1,0 +1,14 @@
+%PDF-1.7 text-layer substitute for deterministic parser coverage
+BT
+Farm: Miller Farm
+Farmer: Mark Miller
+Field: North 80
+County: Boone County
+State: MO
+Acres: 80
+Soil Type: silt loam
+Zone ID, Acres, OM %, pH, P ppm, K ppm
+Z1,24,3.1,6.4,42,235
+Z2,31,4.8,6.7,36,210
+Z3,25,2.2,5.7,28,188
+ET
