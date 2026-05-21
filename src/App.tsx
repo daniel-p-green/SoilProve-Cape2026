@@ -600,10 +600,25 @@ export function App() {
   }
 
   async function startCodexLogin() {
-    const session = await fetchJson<{ loginId: string; authUrl: string }>("/api/codex/login/start", { method: "POST" });
-    setLoginId(session.loginId);
-    window.open(session.authUrl, "_blank", "noopener,noreferrer");
-    setCodexStatus("Finish sign-in in the browser window.");
+    const loginWindow = window.open("about:blank", "_blank");
+    try {
+      if (loginWindow) {
+        loginWindow.document.title = "SoilProve ChatGPT sign-in";
+        loginWindow.document.body.textContent = "Opening ChatGPT sign-in...";
+        loginWindow.opener = null;
+      }
+      const session = await fetchJson<{ loginId: string; authUrl: string }>("/api/codex/login/start", { method: "POST" });
+      setLoginId(session.loginId);
+      if (loginWindow) {
+        loginWindow.location.href = session.authUrl;
+        setCodexStatus("Finish sign-in in the browser window, then return here and click Check ChatGPT sign-in.");
+      } else {
+        setCodexStatus("Popup blocked. Allow popups for this local app, then click Sign in with ChatGPT again.");
+      }
+    } catch (error) {
+      loginWindow?.close();
+      setCodexStatus(`ChatGPT sign-in could not start: ${errorMessage(error)}`);
+    }
   }
 
   async function pollCodexLogin() {
