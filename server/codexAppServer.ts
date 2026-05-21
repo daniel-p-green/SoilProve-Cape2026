@@ -124,20 +124,24 @@ export async function startCodexChatGptLogin(): Promise<CodexLoginSessionView> {
     else earlyNotifications.push(message);
   });
   await client.connect();
-  const result = await startPreferredChatGptLogin(client);
+  const params: CodexLoginAccountParams = {
+    type: "chatgpt",
+    codexStreamlinedLogin: true
+  };
+  const result = (await client.request("account/login/start", params)) as CodexLoginAccountResponse;
 
-  if (result.type !== "chatgpt" && result.type !== "chatgptDeviceCode") {
+  if (result.type !== "chatgpt") {
     client.close();
-    throw new Error("Codex did not return a ChatGPT login session.");
+    throw new Error("Codex did not return a ChatGPT browser login URL.");
   }
 
   loginId = result.loginId;
   const timeout = setTimeout(() => expireLogin(loginId), 180_000);
   const session: CodexLoginSession = {
     loginId,
-    authUrl: result.type === "chatgpt" ? result.authUrl : null,
-    verificationUrl: result.type === "chatgptDeviceCode" ? result.verificationUrl : null,
-    userCode: result.type === "chatgptDeviceCode" ? result.userCode : null,
+    authUrl: result.authUrl,
+    verificationUrl: null,
+    userCode: null,
     status: "pending",
     success: null,
     error: null,
@@ -150,22 +154,6 @@ export async function startCodexChatGptLogin(): Promise<CodexLoginSessionView> {
   loginSessions.set(loginId, session);
   for (const message of earlyNotifications) handleLoginNotification(loginId, message);
   return view(session);
-}
-
-async function startPreferredChatGptLogin(client: CodexAppServerClient): Promise<CodexLoginAccountResponse> {
-  try {
-    const deviceParams: CodexLoginAccountParams = { type: "chatgptDeviceCode" };
-    const result = (await client.request("account/login/start", deviceParams)) as CodexLoginAccountResponse;
-    if (result.type === "chatgptDeviceCode") return result;
-  } catch {
-    // Older app-server builds only support browser OAuth.
-  }
-
-  const browserParams: CodexLoginAccountParams = {
-    type: "chatgpt",
-    codexStreamlinedLogin: false
-  };
-  return (await client.request("account/login/start", browserParams)) as CodexLoginAccountResponse;
 }
 
 export function getCodexLoginSession(loginId: string) {

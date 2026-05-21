@@ -664,17 +664,7 @@ export function App() {
       }
       const session = await fetchJson<CodexLoginSession & { loginId: string }>("/api/codex/login/start", { method: "POST" });
       setLoginId(session.loginId);
-      if (session.verificationUrl) {
-        const userCodeCopy = session.userCode ? ` Use code ${session.userCode}.` : "";
-        if (loginWindow) {
-          loginWindow.location.href = session.verificationUrl;
-          setCodexStatus(`Complete the ChatGPT device-code approval in the browser.${userCodeCopy} SoilProve will detect completion automatically.`);
-        } else {
-          setCodexStatus(
-            `Popup blocked. Open ${session.verificationUrl} to approve ChatGPT access.${userCodeCopy} SoilProve will detect completion automatically.`
-          );
-        }
-      } else if (session.authUrl && loginWindow) {
+      if (session.authUrl && loginWindow) {
         loginWindow.location.href = session.authUrl;
         setCodexStatus("Complete ChatGPT approval. If Codex opens, return to SoilProve; this page will detect completion automatically.");
       } else if (session.authUrl) {
