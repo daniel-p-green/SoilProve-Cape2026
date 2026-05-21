@@ -10,6 +10,9 @@ test("onboarding wizard explains first-run flow and sample-field activation", ()
   assert.equal(source.includes("Find the nitrogen decision buried in your soil reports."), true);
   assert.equal(source.includes("Sign in with ChatGPT"), true);
   assert.equal(source.includes("Opening ChatGPT sign-in..."), true);
+  assert.equal(source.includes("ChatGPT device-code approval"), true);
+  assert.equal(source.includes("SoilProve will detect completion automatically"), true);
+  assert.equal(source.includes("If Codex opens, return to SoilProve"), true);
   assert.equal(source.includes("Popup blocked. Allow popups for this local app"), true);
   assert.equal(source.includes("Demo login"), true);
   assert.equal(source.includes("Ask Raimond"), true);

@@ -18,7 +18,9 @@ export type CodexAuthState = "not_running" | "token_missing" | "login_required" 
 export type CodexLoginStatus = "pending" | "completed" | "failed" | "expired" | "cancelled";
 export type CodexLoginSessionView = {
   loginId: string;
-  authUrl: string;
+  authUrl: string | null;
+  verificationUrl: string | null;
+  userCode: string | null;
   status: CodexLoginStatus;
   success: boolean | null;
   error: string | null;
@@ -122,22 +124,20 @@ export async function startCodexChatGptLogin(): Promise<CodexLoginSessionView> {
     else earlyNotifications.push(message);
   });
   await client.connect();
-  const params: CodexLoginAccountParams = {
-    type: "chatgpt",
-    codexStreamlinedLogin: true
-  };
-  const result = (await client.request("account/login/start", params)) as CodexLoginAccountResponse;
+  const result = await startPreferredChatGptLogin(client);
 
-  if (result.type !== "chatgpt") {
+  if (result.type !== "chatgpt" && result.type !== "chatgptDeviceCode") {
     client.close();
-    throw new Error("Codex did not return a ChatGPT browser login URL.");
+    throw new Error("Codex did not return a ChatGPT login session.");
   }
 
   loginId = result.loginId;
   const timeout = setTimeout(() => expireLogin(loginId), 180_000);
   const session: CodexLoginSession = {
     loginId,
-    authUrl: result.authUrl,
+    authUrl: result.type === "chatgpt" ? result.authUrl : null,
+    verificationUrl: result.type === "chatgptDeviceCode" ? result.verificationUrl : null,
+    userCode: result.type === "chatgptDeviceCode" ? result.userCode : null,
     status: "pending",
     success: null,
     error: null,
@@ -150,6 +150,22 @@ export async function startCodexChatGptLogin(): Promise<CodexLoginSessionView> {
   loginSessions.set(loginId, session);
   for (const message of earlyNotifications) handleLoginNotification(loginId, message);
   return view(session);
+}
+
+async function startPreferredChatGptLogin(client: CodexAppServerClient): Promise<CodexLoginAccountResponse> {
+  try {
+    const deviceParams: CodexLoginAccountParams = { type: "chatgptDeviceCode" };
+    const result = (await client.request("account/login/start", deviceParams)) as CodexLoginAccountResponse;
+    if (result.type === "chatgptDeviceCode") return result;
+  } catch {
+    // Older app-server builds only support browser OAuth.
+  }
+
+  const browserParams: CodexLoginAccountParams = {
+    type: "chatgpt",
+    codexStreamlinedLogin: false
+  };
+  return (await client.request("account/login/start", browserParams)) as CodexLoginAccountResponse;
 }
 
 export function getCodexLoginSession(loginId: string) {
@@ -352,6 +368,8 @@ function view(session: CodexLoginSession): CodexLoginSessionView {
   return {
     loginId: session.loginId,
     authUrl: session.authUrl,
+    verificationUrl: session.verificationUrl,
+    userCode: session.userCode,
     status: session.status,
     success: session.success,
     error: session.error,

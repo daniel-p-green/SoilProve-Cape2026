@@ -73,6 +73,16 @@ type CodexStatusResponse = {
   } | null;
   requiresOpenaiAuth?: boolean | null;
 };
+type CodexLoginSession = {
+  loginId?: string;
+  authUrl?: string | null;
+  verificationUrl?: string | null;
+  userCode?: string | null;
+  status: string;
+  success?: boolean | null;
+  error?: string | null;
+  account: { planType?: string | null } | null;
+};
 type MicPermission = "unknown" | "granted" | "prompt" | "denied" | "unsupported";
 type RaimondMode = "voice" | "chat";
 type AuditEvent = {
@@ -543,6 +553,42 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!loginId || user?.authMode === "codex") return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    const checkLogin = async () => {
+      attempts += 1;
+      try {
+        const session = await fetchJson<CodexLoginSession>(`/api/codex/login/${loginId}`);
+        if (!cancelled && session.status !== "pending") applyCodexLoginSession(loginId, session);
+      } catch (error) {
+        if (!cancelled) {
+          setCodexStatus(
+            `Still waiting for ChatGPT sign-in. If Codex opened, approve there, then return to SoilProve. (${errorMessage(error)})`
+          );
+        }
+      }
+    };
+
+    void checkLogin();
+    const timer = window.setInterval(() => {
+      if (attempts >= maxAttempts) {
+        window.clearInterval(timer);
+        setCodexStatus("ChatGPT sign-in is still pending. Return to SoilProve after approval, or click Check ChatGPT sign-in.");
+        return;
+      }
+      void checkLogin();
+    }, 1500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [loginId, user?.authMode]);
+
+  useEffect(() => {
     if (!prescription) {
       setRegionalContext(null);
       setRegionalInsight(null);
@@ -616,13 +662,26 @@ export function App() {
         loginWindow.document.body.textContent = "Opening ChatGPT sign-in...";
         loginWindow.opener = null;
       }
-      const session = await fetchJson<{ loginId: string; authUrl: string }>("/api/codex/login/start", { method: "POST" });
+      const session = await fetchJson<CodexLoginSession & { loginId: string }>("/api/codex/login/start", { method: "POST" });
       setLoginId(session.loginId);
-      if (loginWindow) {
+      if (session.verificationUrl) {
+        const userCodeCopy = session.userCode ? ` Use code ${session.userCode}.` : "";
+        if (loginWindow) {
+          loginWindow.location.href = session.verificationUrl;
+          setCodexStatus(`Complete the ChatGPT device-code approval in the browser.${userCodeCopy} SoilProve will detect completion automatically.`);
+        } else {
+          setCodexStatus(
+            `Popup blocked. Open ${session.verificationUrl} to approve ChatGPT access.${userCodeCopy} SoilProve will detect completion automatically.`
+          );
+        }
+      } else if (session.authUrl && loginWindow) {
         loginWindow.location.href = session.authUrl;
-        setCodexStatus("Finish sign-in in the browser window, then return here and click Check ChatGPT sign-in.");
-      } else {
+        setCodexStatus("Complete ChatGPT approval. If Codex opens, return to SoilProve; this page will detect completion automatically.");
+      } else if (session.authUrl) {
         setCodexStatus("Popup blocked. Allow popups for this local app, then click Sign in with ChatGPT again.");
+      } else {
+        loginWindow?.close();
+        setCodexStatus("ChatGPT sign-in started, but Codex did not provide a browser URL. Click Check ChatGPT sign-in.");
       }
     } catch (error) {
       loginWindow?.close();
@@ -630,14 +689,31 @@ export function App() {
     }
   }
 
-  async function pollCodexLogin() {
-    if (!loginId) return;
-    const session = await fetchJson<{ status: string; account: { planType?: string } | null }>(`/api/codex/login/${loginId}`);
-    setCodexStatus(`Sign-in ${session.status}.`);
+  function applyCodexLoginSession(nextLoginId: string, session: CodexLoginSession) {
     if (session.status === "completed") {
-      setUser({ id: `codex-${loginId}`, name: demoOperatorName, authMode: "codex", planType: session.account?.planType ?? null });
+      setCodexStatus("ChatGPT sign-in complete.");
+      setLoginId("");
+      setUser({ id: `codex-${nextLoginId}`, name: demoOperatorName, authMode: "codex", role: "admin", planType: session.account?.planType ?? null });
+      setMessage("ChatGPT sign-in is active.");
       dismissOnboarding();
+      return;
     }
+    if (session.status === "failed" || session.status === "expired" || session.status === "cancelled") {
+      setLoginId("");
+      setCodexStatus(session.error || `ChatGPT sign-in ${session.status}.`);
+      return;
+    }
+    if (session.status === "pending") {
+      setCodexStatus("Waiting for ChatGPT sign-in. Return to SoilProve after approval; this page will detect completion automatically.");
+      return;
+    }
+    setCodexStatus(`Sign-in ${session.status}.`);
+  }
+
+  async function pollCodexLogin(nextLoginId = loginId) {
+    if (!nextLoginId) return;
+    const session = await fetchJson<CodexLoginSession>(`/api/codex/login/${nextLoginId}`);
+    applyCodexLoginSession(nextLoginId, session);
   }
 
   async function demoLogin(personaId?: string) {
